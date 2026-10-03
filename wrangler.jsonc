@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "atlesque-gold",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": { "bindings": [{ "name": "GOLD_CACHE", "class_name": "GoldCache", "script_name": "atlesque-gold-cache" }] }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080908" />
+    <meta name="description" content="The current gold price in euros per kilogram, with an interactive 3D gold ingot." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Gold Price Tracker</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <a class="brand" href="/" aria-label="Gold Price Tracker home"><span class="brand-symbol" aria-hidden="true">Au</span><h1>Gold Price Tracker</h1></a>
+        <span id="market-status" class="status" role="status"><span class="status-dot" aria-hidden="true"></span><span id="market-label">Connecting</span></span>
+      </header>
+      <main class="stage">
+        <div id="gold-scene" class="gold-scene" tabindex="0" role="region" aria-label="Interactive gold ingot" aria-describedby="rotation-help"></div>
+        <p id="rotation-help" class="sr-only">Drag to rotate the gold ingot. Use the arrow keys to rotate, or press Home to reset.</p>
+        <div id="quote-panel" class="quote-panel loading" aria-busy="true">
+          <button id="copy-price" class="price-line" type="button" aria-label="Copy gold price in euros per kilogram" aria-describedby="quote-note" disabled><span class="euro" aria-hidden="true">€</span><span id="price">—</span></button>
+          <div class="price-unit" aria-hidden="true">/ kg</div>
+          <span id="copy-hint" class="copy-hint" aria-hidden="true">Copy price</span>
+        </div>
+        <p id="copy-status" class="sr-only" role="status"></p>
+        <p id="loading-status" class="sr-only" role="status">Fetching gold price.</p>
+        <p id="quote-note" class="sr-only" aria-live="polite">Getting the latest available quote.</p>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

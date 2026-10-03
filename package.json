@@ -1,0 +1,28 @@
+{
+  "name": "atlesque-gold",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "types": "wrangler types --config worker/wrangler.jsonc worker/env.d.ts --include-runtime false",
+    "dev:worker": "wrangler dev --config worker/wrangler.jsonc --port 8797 --inspector-port 9247",
+    "dev:pages": "wrangler pages dev dist --port 8788",
+    "deploy:worker": "wrangler deploy --config worker/wrangler.jsonc",
+    "deploy:pages": "npm run build && wrangler pages deploy dist --project-name atlesque-gold --branch main"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261003.1",
+    "@types/three": "^0.186.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.147.0"
+  }
+}

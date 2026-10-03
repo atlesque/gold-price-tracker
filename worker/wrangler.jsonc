@@ -1,0 +1,11 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "atlesque-gold-cache",
+  "main": "index.ts",
+  "compatibility_date": "2026-10-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "durable_objects": { "bindings": [{ "name": "GOLD_CACHE", "class_name": "GoldCache" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GoldCache"] }],
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 }
+}
