@@ -1,11 +1,58 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// Heraeus 1 kg cast gold bar, length × width × thickness:
+// https://www.heraeus-precious-metals.com/en/precious-metal-trading/precious-metals-as-investment/precious-metal-bars/trd-ps-detail/85100015-DE/
+const GOLD_BAR_DIMENSIONS_MM = { length: 116, width: 51, thickness: 9.2 };
+// Keep the existing scene framing using one uniform scale for every physical dimension.
+const SCENE_UNITS_PER_MM = 4.05 / GOLD_BAR_DIMENSIONS_MM.length;
+
+function createGoldBarGeometry(): THREE.ExtrudeGeometry {
+  const width = GOLD_BAR_DIMENSIONS_MM.width * SCENE_UNITS_PER_MM;
+  const length = GOLD_BAR_DIMENSIONS_MM.length * SCENE_UNITS_PER_MM;
+  const thickness = GOLD_BAR_DIMENSIONS_MM.thickness * SCENE_UNITS_PER_MM;
+  const bevel = 1.4 * SCENE_UNITS_PER_MM;
+  const radius = 5 * SCENE_UNITS_PER_MM - bevel;
+  // The bevel expands the outline, so inset it to retain the physical outer dimensions.
+  const x = width / 2 - bevel, y = length / 2 - bevel;
+  const outline = new THREE.Shape();
+  outline.moveTo(-x + radius, -y);
+  outline.lineTo(x - radius, -y);
+  outline.absarc(x - radius, -y + radius, radius, -Math.PI / 2, 0, false);
+  outline.lineTo(x, y - radius);
+  outline.absarc(x - radius, y - radius, radius, 0, Math.PI / 2, false);
+  outline.lineTo(-x + radius, y);
+  outline.absarc(-x + radius, y - radius, radius, Math.PI / 2, Math.PI, false);
+  outline.lineTo(-x, -y + radius);
+  outline.absarc(-x + radius, -y + radius, radius, Math.PI, Math.PI * 1.5, false);
+  const geometry = new THREE.ExtrudeGeometry(outline, {
+    depth: thickness - 2 * bevel, steps: 1, curveSegments: 16,
+    bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 6,
+  });
+  geometry.rotateX(-Math.PI / 2);
+  geometry.translate(0, -thickness / 2 + bevel, 0);
+  const positions = geometry.getAttribute('position');
+  const normals = geometry.getAttribute('normal');
+  const uv = geometry.getAttribute('uv');
+  const groups = geometry.groups.slice(); geometry.clearGroups();
+  // Stamp only the upper cap; the underside and rounded rim remain plain gold.
+  for (const group of groups) {
+    if (group.materialIndex === 1) { geometry.addGroup(group.start, group.count, 1); continue; }
+    let start = group.start, material = normals.getY(start) > .9 ? 0 : 1;
+    for (let i = group.start; i < group.start + group.count; i++) {
+      uv.setXY(i, .5 + positions.getX(i) / width, .5 - positions.getZ(i) / length);
+      const next = normals.getY(i) > .9 ? 0 : 1;
+      if (next !== material) { geometry.addGroup(start, i - start, material); start = i; material = next; }
+    }
+    geometry.addGroup(start, group.start + group.count - start, material);
+  }
+  return geometry;
+}
 
 export async function initGoldScene(container: HTMLElement): Promise<void> {
   const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
@@ -33,28 +80,44 @@ export async function initGoldScene(container: HTMLElement): Promise<void> {
   const edge = new THREE.DirectionalLight(0xffffff, 2.4); edge.position.set(-3, -2, 4); scene.add(edge);
   const glow = new THREE.PointLight(0xffab23, 14, 15, 2); glow.position.set(0, -1, -1); scene.add(glow);
   const group = new THREE.Group(); group.rotation.set(.08, -.38, -.23); scene.add(group);
-  const gold = new THREE.MeshPhysicalMaterial({ color: 0xe7b746, metalness: 1, roughness: .19,
-    clearcoat: .45, clearcoatRoughness: .18, envMapIntensity: 1.2, emissive: 0x6f3905, emissiveIntensity: .18 });
-  const geometry = new RoundedBoxGeometry(2.45, .6, 4.05, 6, .105);
-  const positions = geometry.getAttribute('position');
-  for (let i = 0; i < positions.count; i++) {
-    const taper = 1 - (positions.getY(i) + .3) / .6 * .1;
-    positions.setX(i, positions.getX(i) * taper); positions.setZ(i, positions.getZ(i) * taper);
-  }
-  geometry.computeVertexNormals();
-  const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1536;
+  const gold = new THREE.MeshPhysicalMaterial({ color: 0xe7b746, metalness: 1, roughness: .27,
+    clearcoat: .12, clearcoatRoughness: .25, envMapIntensity: 1.2, emissive: 0x6f3905, emissiveIntensity: .08 });
+  const geometry = createGoldBarGeometry();
+  const canvas = document.createElement('canvas'); canvas.width = 1024;
+  canvas.height = Math.round(canvas.width * GOLD_BAR_DIMENSIONS_MM.length / GOLD_BAR_DIMENSIONS_MM.width);
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#e7b746'; ctx.fillRect(0, 0, 1024, 1536);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#6c501d'; ctx.strokeStyle = '#a27b30'; ctx.lineWidth = 2;
-  ctx.strokeRect(100, 130, 824, 1276);
-  ctx.font = '270px Georgia'; ctx.fillText('Au', 512, 650);
-  ctx.font = '54px Georgia'; ctx.fillText('F I N E   G O L D', 512, 885);
-  ctx.font = '108px Georgia'; ctx.fillText('999.9', 512, 1050);
-  ctx.font = '38px Georgia'; ctx.fillText('1 0 0 0   g', 512, 1230);
+  ctx.fillStyle = '#e7b746'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const stampCanvas = document.createElement('canvas'); stampCanvas.width = canvas.width; stampCanvas.height = canvas.height;
+  const stamp = stampCanvas.getContext('2d')!;
+  stamp.fillStyle = '#b8b8b8'; stamp.fillRect(0, 0, stampCanvas.width, stampCanvas.height);
+  // Small surface variations suggest a cast finish; dark height-map letters are recessed.
+  const grain = stamp.getImageData(0, 0, stampCanvas.width, stampCanvas.height);
+  let seed = 17;
+  for (let i = 0; i < grain.data.length; i += 4) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const pixel = i / 4, x = pixel % stampCanvas.width, y = Math.floor(pixel / stampCanvas.width);
+    const shade = 184 + Math.sin(x * .018 + Math.sin(y * .009)) * 2
+      + Math.sin(y * .013 + Math.cos(x * .012)) * 2 + (seed % 3) - 1;
+    grain.data[i] = grain.data[i + 1] = grain.data[i + 2] = shade;
+  }
+  stamp.putImageData(grain, 0, 0);
+  for (const context of [ctx, stamp]) {
+    context.textAlign = 'center';
+    context.fillStyle = context === stamp ? '#202020' : '#bd9435';
+    context.filter = context === stamp ? 'blur(2px)' : 'none';
+    context.font = 'bold 270px Georgia'; context.fillText('Au', 512, canvas.height * .37);
+    context.font = 'bold 68px Georgia'; context.fillText('F I N E   G O L D', 512, canvas.height * .51);
+    context.font = 'bold 125px Georgia'; context.fillText('999.9', 512, canvas.height * .62);
+    context.font = 'bold 84px Georgia'; context.fillText('1000 g', 512, canvas.height * .8);
+  }
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
-  const face = gold.clone(); face.map = texture; face.color.set(0xffffff); face.roughness = .25;
-  group.add(new THREE.Mesh(geometry, [gold, gold, face, gold, gold, gold]));
+  const stampTexture = new THREE.CanvasTexture(stampCanvas);
+  stampTexture.anisotropy = texture.anisotropy;
+  const face = gold.clone(); face.map = texture; face.color.set(0xffffff); face.roughness = .3;
+  // Bump strength controls the shading of the stamp shoulders, not the bar's dimensions.
+  face.bumpMap = stampTexture; face.bumpScale = .75;
+  group.add(new THREE.Mesh(geometry, [face, gold]));
   const haloCanvas = document.createElement('canvas'); haloCanvas.width = haloCanvas.height = 256;
   const haloContext = haloCanvas.getContext('2d')!;
   const gradient = haloContext.createRadialGradient(128, 128, 5, 128, 128, 128);
@@ -70,7 +133,7 @@ export async function initGoldScene(container: HTMLElement): Promise<void> {
   });
   const composer = new EffectComposer(renderer, sceneTarget);
   const renderPass = new RenderPass(scene, camera);
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .38, .65, 1.05);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .22, .65, 1.05);
   const output = new OutputPass();
   composer.addPass(renderPass); composer.addPass(bloom); composer.addPass(output);
   let frame = 0, lastFrame = 0, visible = true, disposed = false, interacted = false;
@@ -119,6 +182,6 @@ export async function initGoldScene(container: HTMLElement): Promise<void> {
     if (event.persisted) return;
     disposed = true; cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); controls.dispose();
     container.removeEventListener('keydown', onKey); document.removeEventListener('visibilitychange', updateAnimation); motionQuery.removeEventListener('change', onMotionChange);
-    geometry.dispose(); texture.dispose(); gold.dispose(); face.dispose(); environment.dispose(); haloTexture.dispose(); haloMaterial.dispose(); bloom.dispose(); output.dispose(); composer.dispose(); renderer.dispose();
+    geometry.dispose(); texture.dispose(); stampTexture.dispose(); gold.dispose(); face.dispose(); environment.dispose(); haloTexture.dispose(); haloMaterial.dispose(); bloom.dispose(); output.dispose(); composer.dispose(); renderer.dispose();
   }, { once: true });
 }

@@ -4,6 +4,10 @@ A minimal single-page gold-price tracker for **gold.atlesque.dev**: an Au mark, 
 
 Drag with a mouse or touch to freely rotate the ingot. The arrow keys also rotate it; Home restores its initial orientation. Subtle idle rotation stops after interaction. Bloom and metallic reflections give it a warm glow. Animation pauses in hidden tabs and respects reduced-motion preferences. Price provenance and retrieval time are available in the market-status tooltip and to assistive technology.
 
+The ingot uses the published **116 × 51 × 9.2 mm** (length × width × thickness) dimensions of a [Heraeus 1 kg cast gold bar](https://www.heraeus-precious-metals.com/en/precious-metal-trading/precious-metals-as-investment/precious-metal-bars/trd-ps-detail/85100015-DE/), uniformly scaled to fit the scene. Dimensions vary by manufacturer: [Argor-Heraeus](https://www.argor-heraeus.com/en/products-and-services/products/cast-and-minted-bars/1000g-au-cast-classic-999.9/) lists 117.5 × 52 × 9 mm, while [The Perth Mint](https://www.perthmint.com/shop/bullion/cast-bars/1-kilo-gold-cast-bar/) lists maximum dimensions of 112 × 52 × 9 mm. References checked on 3 October 2026. Edge rounding and the generic Au face artwork are visual treatments rather than an exact reproduction of a branded bar.
+
+The reference-inspired cast shape has rounded corners and a softly beveled rim. A procedural height map gives the Au, FINE GOLD, 999.9, and 1000 g lettering recessed shoulders that reflect the scene lighting as the bar rotates, with a subtle cast surface finish. Only the upper face is stamped; the underside remains plain gold.
+
 ## How it works
 
 - Static files run on Cloudflare Pages. Only `/api/*` invokes a Pages Function.
